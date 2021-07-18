@@ -1,5 +1,5 @@
 const Battles = require("../models/battle.model");
-
+const async = require('async')
 
 
 // Retrieve all Battle from the database.
@@ -128,3 +128,105 @@ exports.seachBattleData = (req, res) => {
         res.send({status:400,message:"Missing parameters, Pass some query parameter"})
     }
 };
+
+//get stats
+exports.getBattleStats = async (req,res) =>{
+    let result ={
+        "mostactive":{
+            "attacker_king":null,
+            "defender_king":null,
+            "region":null,
+            "name" : null,
+            "battle_type":null
+        },
+        "attacker_outcome":{
+            "win":null,
+            "lose":null
+        },
+        'defender_size':{
+            "min":null,
+            "max":null,
+            "avg":null
+        }
+    };
+    
+    async.waterfall([
+        function(callback){
+            let requireColumns = ['attacker_king','defender_king','region','name']
+            async.map(requireColumns, function(param, nextCall) {
+                 Battles.mostActive(param,(err,queryResp)=>{
+                    if(err){
+                        console.log('ERR',err)
+                        return(err)
+                    }else{
+                        result.mostactive[param] = queryResp[0][param]
+                        nextCall(null,queryResp[0][param])
+                    }
+                })
+            },(err,loopresult)=>{
+                if(err){
+                    callback(err,null)
+                }else{
+                    callback(null,loopresult)
+                }
+            });
+        },
+        function(status,callback){
+            let requireColumns = ['win','lose']
+            async.map(requireColumns, function(param, nextCall) {
+                 Battles.attackerOutcome(result.mostactive.attacker_king,param,(err,queryResp)=>{
+                    if(err){
+                        console.log('ERR',err)
+                        return(err)
+                    }else{
+                        result.attacker_outcome[param] = queryResp[0][param]
+                        nextCall(null,queryResp[0][param])
+                    }
+                })
+            },(err,loopresult)=>{
+                if(err){
+                    callback(err,null)
+                }else{
+                    callback(null,loopresult)
+                }
+            });
+            
+            
+        },
+        function(status,callback){
+                Battles.battleType(function(err,battletypes){
+                    if(err){
+                        callback(err,null)
+                    }else{
+                        result.battle_type = battletypes.map((x)=>x.battle_type).filter(Boolean)
+                        callback(null,battletypes)
+                    }
+                })
+        },
+        function(status,callback){
+            Battles.defenderInfo(result.mostactive.attacker_king,function(err,defenderInfoResp){
+                if(err){
+                    callback(err,null)
+                }else{
+                    result.defender_size.min = defenderInfoResp[0].min
+                    result.defender_size.max = defenderInfoResp[0].max
+                    result.defender_size.avg = defenderInfoResp[0].avg
+                    console.log('battleType',defenderInfoResp)
+                    callback(null,result)
+                }
+            })
+    }
+        
+    ],(err,finalresult)=>{
+        if(err){
+            res.send({status:500,message:'Something went wrong',err:err})
+
+        }else{
+            res.send({status:200,message:result})
+        }
+    })
+   
+}
+
+
+

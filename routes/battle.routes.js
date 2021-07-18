@@ -7,6 +7,9 @@ module.exports = app => {
     //Retrieve battle count
     app.get("/count", battles.getTotalBattleCount);
 
+    //Stats 
+    app.get("/stats", battles.getBattleStats);
+
     //search 
     app.get("/search", battles.seachBattleData);
 
