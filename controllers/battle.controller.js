@@ -46,7 +46,8 @@ exports.seachBattleData = (req, res) => {
         if(receivedParameters.king){
             searchQuery.push(` (attacker_king LIKE '%${receivedParameters.king}%' OR defender_king LIKE '%${receivedParameters.king}%')`)
         }
-        if(receivedParameters.name){
+    
+        if(receivedParameters.name){        
             searchQuery.push(` name LIKE '%${receivedParameters.name}%'`)
         }
         if(receivedParameters.year){
